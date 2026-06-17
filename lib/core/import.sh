@@ -79,17 +79,17 @@ bl_map_init "BL_FILE_REGISTRY" ""
 _bl_file_set() {
     bl_map_set "BL_FILE_REGISTRY" "$1" "$2" ""
 }
-_bl_file_set "async|pid.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/async/pid.sh"
-_bl_file_set "core|colors.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/core/colors.sh"
-_bl_file_set "core|import.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/core/import.sh"
-_bl_file_set "core|versions.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/core/versions.sh"
-_bl_file_set "dev|compile.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/dev/compile.sh"
-_bl_file_set "info|diagnostics.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/info/diagnostics.sh"
-_bl_file_set "info|tutor.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/info/tutor.sh"
-_bl_file_set "io|pipes.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/io/pipes.sh"
-_bl_file_set "string|selection.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/string/selection.sh"
-_bl_file_set "ui|matrix_filler.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/ui/matrix_filler.sh"
-_bl_file_set "ui|progress_bars.sh" "https://raw.githubusercontent.com/corechunk/bash-lib/main/lib/ui/progress_bars.sh"
+_bl_file_set "async|pid.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/async/pid.sh"
+_bl_file_set "core|colors.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/core/colors.sh"
+_bl_file_set "core|import.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/core/import.sh"
+_bl_file_set "core|versions.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/core/versions.sh"
+_bl_file_set "dev|compile.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/dev/compile.sh"
+_bl_file_set "info|diagnostics.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/info/diagnostics.sh"
+_bl_file_set "info|tutor.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/info/tutor.sh"
+_bl_file_set "io|pipes.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/io/pipes.sh"
+_bl_file_set "string|selection.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/string/selection.sh"
+_bl_file_set "ui|matrix_filler.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/ui/matrix_filler.sh"
+_bl_file_set "ui|progress_bars.sh" "https://raw.githubusercontent.com/corechunk/posix-lib/main/lib/ui/progress_bars.sh"
 # === BL_FILE_REGISTRY_END ===
 
 # Get all unique types registered
