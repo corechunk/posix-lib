@@ -538,14 +538,14 @@ bl_terrain_loader() {
     _bl_empty_char="░"
     _bl_fill_char="█"
     
-    _bl_bg_color="\e[38;5;238m" # Dark grey
-    _bl_reset="\e[0m"
+    _bl_bg_color="\033[38;5;238m" # Dark grey
+    _bl_reset="\033[0m"
 
     _bl_color_mode="time"
     _bl_pattern="random"
     _bl_r1=255; _bl_g1=255; _bl_b1=0 # Default start: Yellow (#FFFF00)
     _bl_r2=0; _bl_g2=255; _bl_b2=255 # Default end: Cyan (#00FFFF)
-    _bl_fg_color="\e[38;5;46m"
+    _bl_fg_color="\033[38;5;46m"
 
     while [ "$#" -gt 0 ]; do
         case "$1" in
@@ -573,7 +573,7 @@ bl_terrain_loader() {
                 _bl_b2="${_bl_tmp#* }"
                 shift 2
                 ;;
-            --fg) _bl_fg_color="\e[38;5;${2}m"; shift 2 ;;
+            --fg) _bl_fg_color="\033[38;5;${2}m"; shift 2 ;;
             *) shift ;;
         esac
     done
@@ -744,7 +744,7 @@ bl_terrain_loader() {
                     fi
                     _bl_x=$((_bl_x + 1))
                 done
-                printf "%b\e[K\n" "$_bl_row_str"
+                printf "%b\033[K\n" "$_bl_row_str"
                 _bl_y=$((_bl_y + 1))
             done
         fi
