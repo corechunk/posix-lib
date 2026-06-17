@@ -2,6 +2,9 @@
 
 This document details the architecture, design choices, dependency structure, and testing model for the ported `posix-lib`.
 
+> [!NOTE]
+> This codebase is fully ported based on `bash-lib` baseline commit: `1233899c53ec9c4da43db7bdbbc4fa91ed2c1970`.
+
 ---
 
 ## 1. Legacy vs. POSIX Architecture

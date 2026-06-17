@@ -1,4 +1,4 @@
-# 🌟 posix-lib (porting in progress)
+# 🌟 posix-lib
 
 ###### a posix porting of corechunk/bash-lib
 
