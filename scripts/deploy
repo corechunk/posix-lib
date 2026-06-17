@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+source lib/dev/compile.sh
+bl_compile_folder -d lib -r -v
+bl_compile --dir lib/ -v --out-name bash-lib --out-dir . --main lib/core/import.sh -s -r

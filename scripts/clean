@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+rm -f bash-lib lib/lib lib/async/async lib/core/core lib/dev/dev lib/info/info lib/io/io lib/string/string lib/ui/ui

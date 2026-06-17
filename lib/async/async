@@ -1,0 +1,56 @@
+# --- Included: lib/async/pid.sh ---
+
+# Global registry for active background PIDs
+declare -g -A BL_PIDS
+
+# Takes Name ($1) and PID ($2)
+bl_pid_store() {
+	local name=$1
+	local pid=$2
+	BL_PIDS["$name"]="$pid"
+}
+
+# Takes Name ($1), waits if active, then unsets
+bl_pid_wait() {
+	local name=$1
+	local pid="${BL_PIDS[$name]}"
+	[[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && wait "$pid"
+	unset "BL_PIDS[$name]"
+}
+
+# Queries process state via /proc or kill -0
+bl_pid_status() {
+	local pid="$1"
+	if [[ -z "$pid" ]]; then
+		echo "FAILED"
+		return 1
+	fi
+	if kill -0 "$pid" 2>/dev/null; then
+		echo "RUNNING"
+		return 0
+	fi
+	
+	# Try to wait on it to harvest the code, discard output
+	wait "$pid" 2>/dev/null
+	local ec=$?
+	# 127 typically means the child already exited and was reaped
+	if (( ec == 0 || ec == 127 )); then
+		echo "SUCCESS"
+	else
+		echo "FAILED"
+	fi
+	return $ec
+}
+
+# Non-blocking background scavenger sweep
+bl_pid_reap() {
+	for name in "${!BL_PIDS[@]}"; do
+		local pid="${BL_PIDS[$name]}"
+		if ! kill -0 "$pid" 2>/dev/null; then
+			# Process is dead, wait to reap and capture exit code
+			wait "$pid" 2>/dev/null
+			unset "BL_PIDS[$name]"
+		fi
+	done
+}
+
