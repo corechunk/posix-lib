@@ -30,7 +30,7 @@ Below is the status of the files migrated to strict POSIX compliance:
 - [ ] `lib/info/tutor.sh` (Bash Reference Tutorial Manual)
 - [x] `lib/io/pipes.sh` (Feeder Pipes)
 - [x] `lib/string/selection.sh` (Range Select Parsers)
-- [ ] `lib/ui/matrix_filler.sh` (Digital Rain Screen Matrix)
+- [x] `lib/ui/matrix_filler.sh` (Digital Rain Screen Matrix)
 - [ ] `lib/ui/progress_bars.sh` (Percentage & Terrain Progress Indicators)
 
 ---

@@ -1,221 +1,269 @@
-#!/usr/bin/env bash
-
 # Enhanced matrix filler animation with multiple modes, color gradients, and language character sets.
 # Supports start/end colors as either tput index or hexadecimal (e.g., "#00FF00").
 # Dependencies: tput, bl_check_deps (project utility)
 
 # Helper: Convert hex color to RGB components
 hex_to_rgb() {
-  local hex=$1
-  hex=${hex#"#"}
-  printf "%d %d %d" "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+  _bl_hex=$1
+  _bl_hex=${_bl_hex#"#"}
+  _bl_r=$(posix_hex_to_dec "$(posix_substr "$_bl_hex" 0 2)")
+  _bl_g=$(posix_hex_to_dec "$(posix_substr "$_bl_hex" 2 2)")
+  _bl_b=$(posix_hex_to_dec "$(posix_substr "$_bl_hex" 4 2)")
+  printf "%d %d %d" "$_bl_r" "$_bl_g" "$_bl_b"
 }
 
 # Helper: Build ANSI escape sequence for truecolor foreground
 rgb_seq() {
-  local r=$1 g=$2 b=$3
-  printf "\e[38;2;%s;%s;%sm" "$r" "$g" "$b"
+  printf "\033[38;2;%s;%s;%sm" "$1" "$2" "$3"
 }
 
 bl_matrix_filler() {
     # Parse options
-    local mode="classic"        # classic | rain | fade
-    local start_color=2          # default tput color index (green)
-    local end_color=7            # default tput color index (white)
-    local start_hex=""          # optional hex overrides
-    local end_hex=""
-    local langs=""              # combination of j,c,k for Japanese, Chinese, Korean
-    local density=50            # default spawn probability (lower = denser)
-    local duration=0            # 0 = run until key press
+    _bl_mode="classic"        # classic | rain | fade
+    _bl_start_color=2          # default tput color index (green)
+    _bl_end_color=7            # default tput color index (white)
+    _bl_start_hex=""          # optional hex overrides
+    _bl_end_hex=""
+    _bl_langs=""              # combination of j,c,k for Japanese, Chinese, Korean
+    _bl_density=50            # default spawn probability (lower = denser)
+    _bl_duration=5            # default to 5 seconds
     
-    while (( "$#" )); do
+    while [ "$#" -gt 0 ]; do
         case "$1" in
-            --mode) mode="$2"; shift 2;;
-            --start-color) start_color="$2"; shift 2;;
-            --end-color) end_color="$2"; shift 2;;
-            --start-hex) start_hex="$2"; shift 2;;
-            --end-hex) end_hex="$2"; shift 2;;
-            --lang) langs+="$2,"; shift 2;;
-            --density) density="$2"; shift 2;;
-            --duration) duration="$2"; shift 2;;
+            --mode) _bl_mode="$2"; shift 2;;
+            --start-color) _bl_start_color="$2"; shift 2;;
+            --end-color) _bl_end_color="$2"; shift 2;;
+            --start-hex) _bl_start_hex="$2"; shift 2;;
+            --end-hex) _bl_end_hex="$2"; shift 2;;
+            --lang) _bl_langs="${_bl_langs}${2},"; shift 2;;
+            --density) _bl_density="$2"; shift 2;;
+            --duration) _bl_duration="$2"; shift 2;;
             *) break;;
         esac
     done
 
     # Build character set based on language flags
-    local chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+{}[]"
-    if [[ $langs == *j* ]]; then
-        chars+=" あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"
-    fi
-    if [[ $langs == *c* ]]; then
-        chars+=" 一二三四五六七八九十百千万"
-    fi
-    if [[ $langs == *k* ]]; then
-        chars+=" 가각간갇갈갉감갑갓갔강갖갗같"
-    fi
-    local char_len=${#chars}
+    _bl_chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#\$%^&*()_+{}[]"
+    case "$_bl_langs" in
+        *j*) _bl_chars="${_bl_chars}あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめも야유요라리루레로와온" ;;
+    esac
+    case "$_bl_langs" in
+        *c*) _bl_chars="${_bl_chars}一二三四五六七八九十百千万" ;;
+    esac
+    case "$_bl_langs" in
+        *k*) _bl_chars="${_bl_chars}가각간갇갈갉감갑갓갔강갖갗같" ;;
+    esac
+    
+    _bl_char_len=$(printf "%s" "$_bl_chars" | wc -c | tr -d ' ')
 
     # Ensure dependencies are present
     bl_check_deps "bl_matrix_filler" "tput" || return 1
 
-    local cols lines
-    cols=$(tput cols)
-    lines=$(tput lines)
-    local start_time=$(date +%s)
+    _bl_cols=$(tput cols 2>/dev/null || echo 80)
+    _bl_lines=$(tput lines 2>/dev/null || echo 24)
+    _bl_start_time=$(date +%s)
+
+    # Fast In-Memory LCG Random State Initialization
+    _bl_rand_state=$(date +%s)
+    _bl_mem_rand() {
+        # X_{n+1} = (1103515245 * X_n + 12345) % 2147483648
+        _bl_rand_state=$(( (1103515245 * _bl_rand_state + 12345) % 2147483648 ))
+        _bl_rand_val=$(( _bl_rand_state ))
+        if [ "$_bl_rand_val" -lt 0 ]; then
+            _bl_rand_val=$(( -_bl_rand_val ))
+        fi
+        if [ -n "$1" ] && [ -n "$2" ]; then
+            _bl_rand_val=$(( (_bl_rand_val % ($2 - $1 + 1)) + $1 ))
+        fi
+    }
 
     # Resize handling
-    trap 'cols=$(tput cols); lines=$(tput lines)' WINCH
+    trap '_bl_cols=$(tput cols 2>/dev/null || echo 80); _bl_lines=$(tput lines 2>/dev/null || echo 24)' WINCH
     # Cleanup on exit
-    trap 'tput sgr0; tput cnorm; clear; trap - WINCH INT TERM RETURN; return' INT TERM RETURN
+    trap 'tput sgr0 2>/dev/null || true; tput cnorm 2>/dev/null || true; clear 2>/dev/null || true; [ -n "$_bl_old_stty" ] && stty "$_bl_old_stty" 2>/dev/null; trap - WINCH INT TERM; exit 1' INT TERM
 
-    tput civis
-    clear
+    tput civis 2>/dev/null || true
+    clear 2>/dev/null || true
 
-    # Initialize drop arrays
-    local -a drops speeds lengths
-    local i
-    for ((i=0; i<cols; i++)); do
-        drops[i]=0
-        speeds[i]=$((RANDOM % 3 + 1))
-        lengths[i]=$((10 + RANDOM % 10))
+    # Set raw stty mode for non-blocking read
+    _bl_old_stty=$(stty -g 2>/dev/null || true)
+    if [ -n "$_bl_old_stty" ]; then
+        stty raw -echo min 0 time 1 2>/dev/null || true
+    fi
+
+    # Initialize drops & speeds in-memory
+    _bl_i=0
+    while [ "$_bl_i" -lt "$_bl_cols" ]; do
+        eval "_bl_drop_${_bl_i}=0"
+        
+        _bl_mem_rand 1 3
+        eval "_bl_speed_${_bl_i}=\$_bl_rand_val"
+        
+        _bl_mem_rand 10 19
+        eval "_bl_length_${_bl_i}=\$_bl_rand_val"
+        
+        _bl_i=$((_bl_i+1))
     done
 
     # Prepare color sequences
-    local sr sg sb er eg eb
-    local start_seq dark_seq darker_seq end_seq end_dark_seq end_darker_seq
-    
-    if [[ -n $start_hex ]]; then
-        read sr sg sb <<<$(hex_to_rgb "$start_hex")
-        start_seq=$(rgb_seq $sr $sg $sb)
-        dark_seq=$(rgb_seq $((sr/3)) $((sg/3)) $((sb/3)))
-        darker_seq=$(rgb_seq $((sr/8)) $((sg/8)) $((sb/8)))
+    if [ -n "$_bl_start_hex" ]; then
+        _bl_rgb_parts=$(hex_to_rgb "$_bl_start_hex")
+        set -- $_bl_rgb_parts
+        _bl_sr=$1; _bl_sg=$2; _bl_sb=$3
+        _bl_start_seq=$(rgb_seq "$_bl_sr" "$_bl_sg" "$_bl_sb")
+        _bl_dark_seq=$(rgb_seq $((_bl_sr/3)) $((_bl_sg/3)) $((_bl_sb/3)))
+        _bl_darker_seq=$(rgb_seq $((_bl_sr/8)) $((_bl_sg/8)) $((_bl_sb/8)))
     else
-        start_seq=$(tput setaf $start_color)
-        dark_seq="\e[2m${start_seq}"
-        darker_seq="\e[2m\e[38;5;22m"
+        _bl_start_seq=$(tput setaf "$_bl_start_color" 2>/dev/null || true)
+        _bl_dark_seq="\033[2m${_bl_start_seq}"
+        _bl_darker_seq="\033[2m\033[38;5;22m"
     fi
     
-    if [[ -n $end_hex ]]; then
-        read er eg eb <<<$(hex_to_rgb "$end_hex")
-        end_seq=$(rgb_seq $er $eg $eb)
-        end_dark_seq=$(rgb_seq $((er/3)) $((eg/3)) $((eb/3)))
-        end_darker_seq=$(rgb_seq $((er/8)) $((eg/8)) $((eb/8)))
+    if [ -n "$_bl_end_hex" ]; then
+        _bl_rgb_parts=$(hex_to_rgb "$_bl_end_hex")
+        set -- $_bl_rgb_parts
+        _bl_er=$1; _bl_eg=$2; _bl_eb=$3
+        _bl_end_seq=$(rgb_seq "$_bl_er" "$_bl_eg" "$_bl_eb")
+        _bl_end_dark_seq=$(rgb_seq $((_bl_er/3)) $((_bl_eg/3)) $((_bl_eb/3)))
+        _bl_end_darker_seq=$(rgb_seq $((_bl_er/8)) $((_bl_eg/8)) $((_bl_eb/8)))
     else
-        end_seq=$(tput setaf $end_color)
-        end_dark_seq="\e[2m${end_seq}"
-        end_darker_seq="\e[2m\e[38;5;53m"
+        _bl_end_seq=$(tput setaf "$_bl_end_color" 2>/dev/null || true)
+        _bl_end_dark_seq="\033[2m${_bl_end_seq}"
+        _bl_end_darker_seq="\033[2m\033[38;5;53m"
     fi
 
     while true; do
-        if (( duration > 0 )) && (( $(date +%s) - start_time >= duration )); then
+        if [ "$_bl_duration" -gt 0 ] && [ "$(( $(date +%s) - _bl_start_time ))" -ge "$_bl_duration" ]; then
             break
         fi
 
-        local frame_buffer=""
-        for ((i=0; i<cols; i++)); do
+        _bl_frame_buffer=""
+        _bl_i=0
+        while [ "$_bl_i" -lt "$_bl_cols" ]; do
+            eval "_bl_drop_val=\$_bl_drop_${_bl_i}"
+            eval "_bl_speed_val=\$_bl_speed_${_bl_i}"
+
             # Possibly start a new drop
-            if (( drops[i] == 0 && RANDOM % density == 0 )); then
-                drops[i]=1
-                speeds[i]=$((RANDOM % 3 + 1))
+            if [ "$_bl_drop_val" -eq 0 ]; then
+                _bl_mem_rand 1 "$_bl_density"
+                if [ "$_bl_rand_val" -eq 1 ]; then
+                    _bl_drop_val=1
+                    eval "_bl_drop_${_bl_i}=1"
+                    _bl_mem_rand 1 3
+                    eval "_bl_speed_${_bl_i}=\$_bl_rand_val"
+                    _bl_speed_val=$_bl_rand_val
+                fi
             fi
 
-            if (( drops[i] > 0 )); then
+            if [ "$_bl_drop_val" -gt 0 ]; then
                 # Move down based on speed
-                if (( RANDOM % speeds[i] == 0 )); then
-                    local rand_char="${chars:RANDOM%char_len:1}"
+                _bl_mem_rand 1 "$_bl_speed_val"
+                if [ "$_bl_rand_val" -eq 1 ]; then
+                    _bl_mem_rand 0 $((_bl_char_len - 1))
+                    _bl_rand_char=$(posix_substr "$_bl_chars" "$_bl_rand_val" 1)
 
-                    # Determine colors for head and middle based on mode
-                    local head_color middle_color dark_color darker_color
-                    case "$mode" in
+                    # Determine colors
+                    _bl_head_color=""
+                    _bl_middle_color=""
+                    _bl_dark_color=""
+                    _bl_darker_color=""
+                    
+                    case "$_bl_mode" in
                         rain)
-                            # Head turns to end_color when it hits the bottom 20%
-                            if (( drops[i] > lines*8/10 )); then
-                                head_color=$end_seq
+                            if [ "$_bl_drop_val" -gt "$(( _bl_lines * 8 / 10 ))" ]; then
+                                _bl_head_color=$_bl_end_seq
                             else
-                                head_color=$start_seq
+                               _bl_head_color=$_bl_start_seq
                             fi
-                            middle_color=$start_seq
-                            dark_color=$dark_seq
-                            darker_color=$darker_seq
+                            _bl_middle_color=$_bl_start_seq
+                            _bl_dark_color=$_bl_dark_seq
+                            _bl_darker_color=$_bl_darker_seq
                             ;;
                         fade)
-                            if [[ -n $start_hex && -n $end_hex ]]; then
-                                # Smooth RGB mathematical blend
-                                local fraction=$((drops[i] * 100 / lines))
-                                if (( fraction > 100 )); then fraction=100; fi
-                                local br=$(( sr + (er - sr) * fraction / 100 ))
-                                local bg=$(( sg + (eg - sg) * fraction / 100 ))
-                                local bb=$(( sb + (eb - sb) * fraction / 100 ))
+                            if [ -n "$_bl_start_hex" ] && [ -n "$_bl_end_hex" ]; then
+                                _bl_fraction=$(( _bl_drop_val * 100 / _bl_lines ))
+                                [ "$_bl_fraction" -gt 100 ] && _bl_fraction=100
+                                _bl_br=$(( _bl_sr + (_bl_er - _bl_sr) * _bl_fraction / 100 ))
+                                _bl_bg=$(( _bl_sg + (_bl_eg - _bl_sg) * _bl_fraction / 100 ))
+                                _bl_bb=$(( _bl_sb + (_bl_eb - _bl_sb) * _bl_fraction / 100 ))
                                 
-                                head_color=$(rgb_seq $br $bg $bb)
-                                middle_color=$head_color
-                                dark_color=$(rgb_seq $((br/3)) $((bg/3)) $((bb/3)))
-                                darker_color=$(rgb_seq $((br/8)) $((bg/8)) $((bb/8)))
+                                _bl_head_color=$(rgb_seq "$_bl_br" "$_bl_bg" "$_bl_bb")
+                                _bl_middle_color=$_bl_head_color
+                                _bl_dark_color=$(rgb_seq $((_bl_br/3)) $((_bl_bg/3)) $((_bl_bb/3)))
+                                _bl_darker_color=$(rgb_seq $((_bl_br/8)) $((_bl_bg/8)) $((_bl_bb/8)))
                             else
-                                # Fallback if standard colors are used
-                                local fraction=$((drops[i] * 100 / lines))
-                                if (( fraction > 50 )); then
-                                    head_color=$end_seq
-                                    middle_color=$end_seq
-                                    dark_color=$end_dark_seq
-                                    darker_color=$end_darker_seq
+                                _bl_fraction=$(( _bl_drop_val * 100 / _bl_lines ))
+                                if [ "$_bl_fraction" -gt 50 ]; then
+                                    _bl_head_color=$_bl_end_seq
+                                    _bl_middle_color=$_bl_end_seq
+                                    _bl_dark_color=$_bl_end_dark_seq
+                                    _bl_darker_color=$_bl_end_darker_seq
                                 else
-                                    head_color=$start_seq
-                                    middle_color=$start_seq
-                                    dark_color=$dark_seq
-                                    darker_color=$darker_seq
+                                    _bl_head_color=$_bl_start_seq
+                                    _bl_middle_color=$_bl_start_seq
+                                    _bl_dark_color=$_bl_dark_seq
+                                    _bl_darker_color=$_bl_darker_seq
                                 fi
                             fi
                             ;;
                         *)
-                            # Classic Matrix
-                            head_color=$end_seq
-                            middle_color=$start_seq
-                            dark_color=$dark_seq
-                            darker_color=$darker_seq
+                            _bl_head_color=$_bl_end_seq
+                            _bl_middle_color=$_bl_start_seq
+                            _bl_dark_color=$_bl_dark_seq
+                            _bl_darker_color=$_bl_darker_seq
                             ;;
                     esac
 
-                    # 1. Print head character (Bright White/End Color)
-                    if (( drops[i] <= lines )); then
-                        frame_buffer+="\e[$((drops[i]+1));$((i+1))H${head_color}\e[1m${rand_char}"
+                    # 1. Print head character
+                    if [ "$_bl_drop_val" -le "$_bl_lines" ]; then
+                        _bl_frame_buffer="${_bl_frame_buffer}\033[$((_bl_drop_val+1));$((_bl_i+1))H${_bl_head_color}\033[1m${_bl_rand_char}"
                     fi
 
-                    # 2. Print middle character (Bright Trail)
-                    local mid=$((drops[i] - 1))
-                    if (( mid > 0 && mid <= lines )); then
-                        frame_buffer+="\e[$((mid+1));$((i+1))H\e[0m${middle_color}${rand_char}"
+                    # 2. Print middle character
+                    _bl_mid=$((_bl_drop_val - 1))
+                    if [ "$_bl_mid" -gt 0 ] && [ "$_bl_mid" -le "$_bl_lines" ]; then
+                        _bl_frame_buffer="${_bl_frame_buffer}\033[$((_bl_mid+1));$((_bl_i+1))H\033[0m${_bl_middle_color}${_bl_rand_char}"
                     fi
 
-                    # 3. Fade to Dark (Mutating character)
-                    local dark_pos=$((drops[i] - 6))
-                    if (( dark_pos > 0 && dark_pos <= lines )); then
-                        local rand_char_dark="${chars:RANDOM%char_len:1}"
-                        frame_buffer+="\e[$((dark_pos+1));$((i+1))H\e[0m${dark_color}${rand_char_dark}"
+                    # 3. Fade to Dark
+                    _bl_dark_pos=$((_bl_drop_val - 6))
+                    if [ "$_bl_dark_pos" -gt 0 ] && [ "$_bl_dark_pos" -le "$_bl_lines" ]; then
+                        _bl_mem_rand 0 $((_bl_char_len - 1))
+                        _bl_rand_char_dark=$(posix_substr "$_bl_chars" "$_bl_rand_val" 1)
+                        _bl_frame_buffer="${_bl_frame_buffer}\033[$((_bl_dark_pos+1));$((_bl_i+1))H\033[0m${_bl_dark_color}${_bl_rand_char_dark}"
                     fi
 
-                    # 4. Fade to Very Dark (Mutating character, persists forever)
-                    local darker_pos=$((drops[i] - 14))
-                    if (( darker_pos > 0 && darker_pos <= lines )); then
-                        local rand_char_darker="${chars:RANDOM%char_len:1}"
-                        frame_buffer+="\e[$((darker_pos+1));$((i+1))H\e[0m${darker_color}${rand_char_darker}"
+                    # 4. Fade to Very Dark
+                    _bl_darker_pos=$((_bl_drop_val - 14))
+                    if [ "$_bl_darker_pos" -gt 0 ] && [ "$_bl_darker_pos" -le "$_bl_lines" ]; then
+                        _bl_mem_rand 0 $((_bl_char_len - 1))
+                        _bl_rand_char_darker=$(posix_substr "$_bl_chars" "$_bl_rand_val" 1)
+                        _bl_frame_buffer="${_bl_frame_buffer}\033[$((_bl_darker_pos+1));$((_bl_i+1))H\033[0m${_bl_darker_color}${_bl_rand_char_darker}"
                     fi
 
-                    # Never erase - characters stay on screen until overwritten by next drop
-
-                    ((drops[i]++))
-                    if (( drops[i] > lines + 20 )); then
-                        drops[i]=0
+                    # Increment drop
+                    _bl_drop_val=$(( _bl_drop_val + 1 ))
+                    eval "_bl_drop_${_bl_i}=\$_bl_drop_val"
+                    if [ "$_bl_drop_val" -gt "$(( _bl_lines + 20 ))" ]; then
+                        eval "_bl_drop_${_bl_i}=0"
                     fi
                 fi
             fi
+            _bl_i=$((_bl_i+1))
         done
-        printf "%b" "$frame_buffer"
-        read -t 0.05 -n 1 && break
+        printf "%b" "$_bl_frame_buffer"
+        
+        # Read a key safely with non-blocking stty settings
+        _bl_key=""
+        read -r _bl_key <&0 2>/dev/null || true
+        if [ -n "$_bl_key" ]; then
+            break
+        fi
     done
 
-    tput sgr0
-    tput cnorm
-    clear
-    trap - WINCH INT TERM RETURN
+    tput sgr0 2>/dev/null || true
+    tput cnorm 2>/dev/null || true
+    clear 2>/dev/null || true
+    [ -n "$_bl_old_stty" ] && stty "$_bl_old_stty" 2>/dev/null || true
+    trap - WINCH INT TERM
 }
