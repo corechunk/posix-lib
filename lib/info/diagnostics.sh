@@ -415,11 +415,13 @@ bl_info_menu() {
                 _bl_i=1
                 for _bl_f in $_bl_sorted_funcs; do
                     _bl_load_status="%b✗%b"
+                    _bl_status_color="$_bl_c_red"
                     if posix_is_func "$_bl_f"; then
                         _bl_load_status="%b✓%b"
+                        _bl_status_color="$_bl_c_green"
                     fi
                     printf "  %b%d)%b " "$_bl_c_yellow" "$_bl_i" "$_bl_c_reset"
-                    printf "$_bl_load_status" "$_bl_c_green" "$_bl_c_reset"
+                    printf "$_bl_load_status" "$_bl_status_color" "$_bl_c_reset"
                     printf " %s\n" "$_bl_f"
                     
                     _bl_i=$((_bl_i+1))

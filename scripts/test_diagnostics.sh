@@ -43,5 +43,17 @@ print_header "Verifying bl_info_check Output"
 bl_info_check
 
 printf "\n======================================================================\n"
-echo "  Diagnostics test suite execution completed successfully."
+echo "  Diagnostics test suite checks completed successfully."
 printf "======================================================================\n"
+
+# Launch the interactive menu if connected to a terminal (user observer)
+if [ -t 0 ] && [ -t 1 ]; then
+    printf "\n"
+    printf "Launch interactive diagnostics menu? [y/N]: "
+    read -r launch_choice
+    case "$launch_choice" in
+        [yY]|[yY][eE][sS])
+            bl_info_menu
+            ;;
+    esac
+fi
