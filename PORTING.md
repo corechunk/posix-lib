@@ -16,6 +16,23 @@ This document details the architecture, design choices, dependency structure, an
 *   Consequently, `lib/core/posix.sh` is now a direct dependency of `lib/core/import.sh`.
 *   In fact, `posix.sh` is the underlying dependency foundation for **all** files in the repository.
 
+## 3. Porting Progress Checklist
+
+Below is the status of the files migrated to strict POSIX compliance:
+
+- [x] `lib/core/posix.sh` (POSIX Helper Engine)
+- [x] `lib/core/import.sh` (Core Sourcing Loader)
+- [x] `lib/async/pid.sh` (Background PID Manager)
+- [x] `lib/core/colors.sh` (ANSI Colors Registry)
+- [ ] `lib/core/versions.sh` (SemVer Comparison)
+- [ ] `lib/dev/compile.sh` (Compiler Builder)
+- [ ] `lib/info/diagnostics.sh` (Load Inspector & Diagnostics)
+- [ ] `lib/info/tutor.sh` (Bash Reference Tutorial Manual)
+- [ ] `lib/io/pipes.sh` (Feeder Pipes)
+- [ ] `lib/string/selection.sh" (Range Select Parsers)
+- [ ] `lib/ui/matrix_filler.sh` (Digital Rain Screen Matrix)
+- [ ] `lib/ui/progress_bars.sh` (Percentage & Terrain Progress Indicators)
+
 ---
 
 ## 2. Testing & Verification Pattern

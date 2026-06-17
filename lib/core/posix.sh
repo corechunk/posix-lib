@@ -99,6 +99,13 @@ bl_map_unset() {
     unset "${_bl_map_var_name}"
 }
 
+# Usage: bl_map_unset_key "map" "key" [salt]
+bl_map_unset_key() {
+    _bl_map_var_name=$(printf "%s" "BL_MAP_${1}_${3}" | tr ':/.-' '____')
+    eval "_bl_map_dir=\"\$${_bl_map_var_name}\""
+    _bl_key_file=$(printf "%s" "$2" | tr ':/.-' '____')
+    [ -f "$_bl_map_dir/$_bl_key_file" ] && rm -f "$_bl_map_dir/$_bl_key_file"
+}
 
 # Usage: bl_map_keys "map" [salt]
 bl_map_keys() {
@@ -109,6 +116,7 @@ bl_map_keys() {
         ls -1 "$_bl_map_dir" 2>/dev/null || true
     fi
 }
+
 
 
 
