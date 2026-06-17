@@ -1,55 +1,59 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
+# --- posix-lib Feeder Pipes (POSIX Compliant) ---
 
 # 1. Logic Layer: Monitors a directory for files matching a pattern and emits raw finished count
 # Args: $1=Total, $2=Hz, $3=Directory, $4=Pattern
 bl_file_count_feeder_() {
-	local total=$1
-	local hz=${2:-10}
-	local dir="${3:-/tmp}"
-	local pattern="${4:-*.done}"
-	local finished=0
-	
-	# Convert Hz to decimal interval (Bash Integer Scaling)
-	local ms=$(( 1000 / hz ))
-	local interval=$(printf "%d.%03d" $(( ms / 1000 )) $(( ms % 1000 )))
+    _bl_total=$1
+    _bl_hz=${2:-10}
+    _bl_dir="${3:-/tmp}"
+    _bl_pattern="${4:-*.done}"
+    _bl_finished=0
+    
+    # Convert Hz to decimal interval (POSIX arithmetic)
+    _bl_ms=$(( 1000 / _bl_hz ))
+    _bl_interval=$(printf "%d.%03d" $(( _bl_ms / 1000 )) $(( _bl_ms % 1000 )))
 
-	while (( finished < total )); do
-		local files=( "$dir"/$pattern )
-		finished=${#files[@]}
-		[[ -e "${files[0]}" ]] || finished=0
-		
-		echo "$finished"
-		sleep "$interval"
-	done
+    while [ "$_bl_finished" -lt "$_bl_total" ]; do
+        _bl_count=0
+        for _bl_f in "$_bl_dir"/$_bl_pattern; do
+            [ -e "$_bl_f" ] && _bl_count=$((_bl_count+1))
+        done
+        _bl_finished="$_bl_count"
+        
+        echo "$_bl_finished"
+        sleep "$_bl_interval"
+    done
 }
 
 # 2. Math Layer: Converts raw count to 0-100 stream
 # Args: $1=Total, $2=Format (optional: "v2" for P: tag)
 # _bl_count_percent_emitter_ now accepts a flag "tagged" (or "--tagged") to emit P: prefixed percentages
 _bl_count_percent_emitter_() {
-    local total=$1
-    local flag="$2"
-    while read -r count; do
-        local percent=$(( (count * 100) / total ))
-        if [[ "$flag" == "tagged" || "$flag" == "--tagged" ]]; then
-            echo "P:$percent"
+    _bl_total=$1
+    _bl_flag="$2"
+    while read -r _bl_count; do
+        _bl_percent=$(( (_bl_count * 100) / _bl_total ))
+        if [ "$_bl_flag" = "tagged" ] || [ "$_bl_flag" = "--tagged" ]; then
+            echo "P:$_bl_percent"
         else
-            echo "$percent"
+            echo "$_bl_percent"
         fi
-        [[ $percent -ge 100 ]] && break
+        [ "$_bl_percent" -ge 100 ] && break
     done
 }
 
 # bl_file_log_feeder_ now accepts an optional third argument specifying the prefix (default M:)
 bl_file_log_feeder_() {
-    local logfile="$1"
-    local hz=${2:-5}
-    local prefix="${3:-M:}"
-    local ms=$(( 1000 / hz ))
-    local interval=$(printf "%d.%03d" $(( ms / 1000 )) $(( ms % 1000 )))
-    while [[ -f "$logfile" ]]; do
-        local line=$(tail -n 1 "$logfile" | cut -c 1-80)
-        echo "${prefix}${line}"
-        sleep "$interval"
+    _bl_logfile="$1"
+    _bl_hz=${2:-5}
+    _bl_prefix="${3:-M:}"
+    _bl_ms=$(( 1000 / _bl_hz ))
+    _bl_interval=$(printf "%d.%03d" $(( _bl_ms / 1000 )) $(( _bl_ms % 1000 )))
+    
+    while [ -f "$_bl_logfile" ]; do
+        _bl_line=$(tail -n 1 "$_bl_logfile" | cut -c 1-80)
+        echo "${_bl_prefix}${_bl_line}"
+        sleep "$_bl_interval"
     done
 }
