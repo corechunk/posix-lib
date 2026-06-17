@@ -257,6 +257,33 @@ test_rand_range 2 8
 test_rand_range 45 47
 
 # ======================================================================
+# SECTION 9.5: Shell function validation
+# ======================================================================
+print_header "Shell function validation (posix_is_func)"
+cat <<'EOF'
+```sh
+test_func() { :; }
+posix_is_func "test_func"
+posix_is_func "non_existent_func"
+```
+EOF
+
+test_func() { :; }
+if posix_is_func "test_func"; then
+    echo "posix_is_func 'test_func': DETECTED (OK)"
+else
+    echo "posix_is_func 'test_func': FAILED" >&2
+    exit 1
+fi
+
+if ! posix_is_func "non_existent_func"; then
+    echo "posix_is_func 'non_existent_func': NOT DETECTED (OK)"
+else
+    echo "posix_is_func 'non_existent_func': FAILED" >&2
+    exit 1
+fi
+
+# ======================================================================
 # SECTION 10: Scope Cleanup Verification
 # ======================================================================
 print_header "Scope isolation & Cleanup check"

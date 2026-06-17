@@ -13,8 +13,8 @@ _bl_gen_salt() {
 _bl_register_resource() {
     # If the name is _BL_RESOURCE_REGISTRY, do NOT register it
     [ "$2" = "_BL_RESOURCE_REGISTRY" ] && return 0
-    # Key: type:name:salt, Value: 1 (to store presence)
-    bl_map_set "_BL_RESOURCE_REGISTRY" "$1:$2:$3" "1" ""
+    # Key: type|name|salt, Value: 1 (to store presence)
+    bl_map_set "_BL_RESOURCE_REGISTRY" "$1|$2|$3" "1" ""
 }
 
 # --- Variable Helpers ---
@@ -126,10 +126,10 @@ bl_map_keys() {
 bl_cleanup_scope() {
     _bl_target_salt=$1
     for entry in $(bl_map_keys "_BL_RESOURCE_REGISTRY" ""); do
-        _bl_type="${entry%%:*}"
-        _bl_rest="${entry#*:}"
-        _bl_name="${_bl_rest%%:*}"
-        _bl_salt="${_bl_rest#*:}"
+        _bl_type="${entry%%|*}"
+        _bl_rest="${entry#*|}"
+        _bl_name="${_bl_rest%%|*}"
+        _bl_salt="${_bl_rest#*|}"
         
         if [ "$_bl_salt" = "$_bl_target_salt" ]; then
             case "$_bl_type" in
@@ -144,10 +144,10 @@ bl_cleanup_scope() {
 # Usage: bl_cleanup_global
 bl_cleanup_global() {
     for entry in $(bl_map_keys "_BL_RESOURCE_REGISTRY" ""); do
-        _bl_type="${entry%%:*}"
-        _bl_rest="${entry#*:}"
-        _bl_name="${_bl_rest%%:*}"
-        _bl_salt="${_bl_rest#*:}"
+        _bl_type="${entry%%|*}"
+        _bl_rest="${entry#*|}"
+        _bl_name="${_bl_rest%%|*}"
+        _bl_salt="${_bl_rest#*|}"
         
         case "$_bl_type" in
             VAR) bl_var_unset "$_bl_name" "$_bl_salt" ;;
@@ -262,6 +262,18 @@ posix_hex_to_dec() {
     _p_hex=${1#\#} # Strip '#' if present
     _p_hex=${_p_hex#0x} # Strip '0x' if present
     printf "%d\n" "0x$_p_hex"
+}
+
+# posix_is_func NAME
+#   Returns 0 if NAME is defined as a shell function in the current execution environment.
+posix_is_func() {
+    _p_name="$1"
+    [ -z "$_p_name" ] && return 1
+    if command -v command >/dev/null 2>&1; then
+        command -V "$_p_name" 2>/dev/null | grep -q "function"
+    else
+        type "$_p_name" 2>/dev/null | grep -q "function"
+    fi
 }
 
 # --- Initialization ---
