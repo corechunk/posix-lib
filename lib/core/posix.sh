@@ -249,6 +249,9 @@ posix_substr() {
     _p_offset=$2
     _p_len=$3
     if [ -n "$_p_len" ]; then
+        if [ "$_p_len" -le 0 ]; then
+            return 0
+        fi
         # cut uses 1-based index, so add 1 to offset
         printf "%s" "$_p_str" | cut -c $(( _p_offset + 1 ))-$(( _p_offset + _p_len ))
     else
